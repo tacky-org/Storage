@@ -1,0 +1,69 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as Stories from "./Transforms.stories";
+
+<Meta of={Stories} />
+
+# `map` and `unmap`
+
+Use `map` and `unmap` when the shape you want to work with in components
+differs from the shape you can safely serialise to storage.
+
+<table>
+  <thead><tr><th>Option</th><th>Direction</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>map</code></td>
+      <td>stored → runtime</td>
+      <td>Inflate raw data — e.g. turn a timestamp number into a <code>Date</code></td>
+    </tr>
+    <tr>
+      <td><code>unmap</code></td>
+      <td>runtime → stored</td>
+      <td>Deflate back to a serialisable shape before writing</td>
+    </tr>
+  </tbody>
+</table>
+
+`map` and `unmap` must always be provided together — TypeScript will error if one is missing.
+
+The full read pipeline: `getItem → validate → map → TRuntime`
+
+The full write pipeline: `TRuntime → unmap → setItem`
+
+## Example — timestamps as Date objects
+
+```ts
+interface StoredNote { text: string; updatedAt: number }   // stored
+interface Note       { text: string; updatedAt: Date; updatedAtLabel: string } // runtime
+
+const noteStore = StorageStore.create<StoredNote, Note>({
+  key:   'note',
+  store: localStorage,
+  validate: withZod(StoredNoteSchema),
+
+  map: ({ text, updatedAt }) => ({
+    text,
+    updatedAt:      new Date(updatedAt),
+    updatedAtLabel: new Date(updatedAt).toLocaleTimeString(),
+  }),
+
+  unmap: ({ text, updatedAt }) => ({
+    text,
+    updatedAt: updatedAt.getTime(),   // Date → number for storage
+  }),
+});
+```
+
+`updatedAtLabel` is derived on every read and never persisted —
+only `text` and `updatedAt: number` are in storage.
+
+## `patch` with transforms
+
+`patch` still goes through `unmap` on write, so it's safe to use with transforms:
+
+```ts
+// reads current → merges partial → unmaps → stores
+noteStore.patch({ text: 'New text', updatedAt: new Date() });
+```
+
+<Canvas of={Stories.MapUnmap} />

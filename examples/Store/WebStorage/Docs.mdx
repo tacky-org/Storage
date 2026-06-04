@@ -1,0 +1,55 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as Stories from "./WebStorage.stories";
+
+<Meta of={Stories} />
+
+# Web Storage
+
+Pass `localStorage` or `sessionStorage` directly as the `store` option.
+`key` is the logical identifier for your store — it is written to the browser
+as `storage__<key>` automatically to avoid collisions with other libraries.
+
+```ts
+import { StorageStore } from '@tacky-org/storage';
+
+const userPrefsStore = StorageStore.create({
+  key:          'user_prefs',
+  store:        localStorage,   // stored as storage__user_prefs
+  validate:     withZod(UserPrefsSchema),
+  defaultValue: DEFAULT_USER_PREFS,
+});
+
+const draftStore = StorageStore.create({
+  key:          'draft',
+  store:        sessionStorage, // cleared when the tab closes
+  validate:     withZod(DraftSchema),
+  defaultValue: DEFAULT_DRAFT,
+});
+```
+
+`sessionStorage` is tab-scoped — no cross-tab events fire.
+`localStorage` emits the native `storage` event on writes from other tabs,
+which `useStorageSuspenseQuery` and `useStorageQuery` pick up automatically.
+
+### Custom storage backend
+
+If you need a non-standard backend (encrypted storage, IndexedDB wrapper, etc.),
+implement the `ExternalStore` interface directly and pass it as `store`:
+
+```ts
+import { StorageStore, ExternalStore } from '@tacky-org/storage';
+
+const encryptedStorage: ExternalStore = {
+  getItem()          { /* decrypt and return */ },
+  setItem(value)     { /* encrypt and store */ },
+  subscribe(listener){ /* wire up change events */ ; return () => { /* unsubscribe */ }; },
+};
+
+const secretStore = StorageStore.create({
+  key:      'secret',
+  store:    encryptedStorage,
+  validate: withZod(SecretSchema),
+});
+```
+
+<Canvas of={Stories.Standard} />

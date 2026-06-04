@@ -1,0 +1,66 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as Stories from "./Pattern.stories";
+
+<Meta of={Stories} />
+
+# App structure pattern
+
+The recommended pattern is a `stores/` folder with one file per store.
+Each file exports the store. Components import the store directly — no prop drilling, no context.
+
+```
+src/
+  stores/
+    userPrefsStore.ts
+    themeStore.ts
+    draftStore.ts
+  components/
+    ThemeToggle.tsx
+    PrefsForm.tsx
+```
+
+## `stores/userPrefsStore.ts`
+
+```ts
+import { StorageStore } from '@tacky-org/storage';
+import { withZod } from '@tacky-org/storage';
+import { z } from 'zod';
+
+const UserPrefsSchema = z.object({
+  theme:         z.enum(['light', 'dark']),
+  language:      z.string(),
+  notifications: z.boolean(),
+});
+
+type UserPrefs = z.infer<typeof UserPrefsSchema>;
+
+export const userPrefsStore = StorageStore.create<UserPrefs>({
+  key:          'user_prefs',        // stored as storage__user_prefs
+  store:        localStorage,
+  validate:     withZod(UserPrefsSchema),
+  defaultValue: { theme: 'light', language: 'en', notifications: false },
+});
+```
+
+## `components/ThemeToggle.tsx`
+
+```tsx
+import { useStorageSuspenseQuery, useStorageMutation } from '@tacky-org/storage';
+import { userPrefsStore } from '../stores/userPrefsStore';
+
+export function ThemeToggle() {
+  const { data: prefs } = useStorageSuspenseQuery(userPrefsStore);
+  const mutation = useStorageMutation(userPrefsStore);
+
+  return (
+    <button onClick={() => mutation.set({ ...prefs, theme: prefs.theme === 'dark' ? 'light' : 'dark' })}>
+      Switch to {prefs.theme === 'dark' ? 'light' : 'dark'} mode
+    </button>
+  );
+}
+```
+
+Any number of components can import the same store. When one writes, all re-render.
+No provider, no context — just import and use.
+
+<Canvas of={Stories.Standard} />

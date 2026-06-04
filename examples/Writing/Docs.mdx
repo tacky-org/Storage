@@ -1,0 +1,77 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as Stories from "./Writing.stories";
+
+<Meta of={Stories} />
+
+# Writing
+
+`useStorageMutation` returns a `set` method, a `patch` method, and TanStack
+Query mutation status — all in one object. Both methods write to the store
+and invalidate the query automatically.
+
+```tsx
+const mutation = useStorageMutation(userPrefsStore);
+
+mutation.set({ theme: 'dark', language: 'en', notifications: true });  // full replace
+mutation.patch({ theme: 'dark' });                                       // partial update
+```
+
+## Error handling
+
+Any error thrown during the write pipeline — `unmap`, `setItem`, etc. — is a
+`StoragePipelineError`. TanStack's mutation catches it automatically:
+
+```tsx
+const mutation = useStorageMutation(userPrefsStore);
+
+if (mutation.isError) {
+  const err = mutation.error;
+  if (err instanceof StoragePipelineError) {
+    console.error(`Write failed at step "${err.step}":`, err.cause);
+  }
+}
+```
+
+## `set` — full replace
+
+Replaces the entire stored value. Every field must be provided.
+
+```tsx
+mutation.set({ theme: 'dark', language: 'en', notifications: true });
+```
+
+<Canvas of={Stories.MutationStory} />
+
+## `patch` — partial update
+
+Shallow-merges a partial value into the current state.
+Under the hood: `get()` → merge → `set()` → invalidate.
+
+```tsx
+mutation.patch({ theme: 'dark' });  // language and notifications are preserved
+```
+
+## Store granularity and re-renders
+
+Every write — whether `set` or `patch` — invalidates the store's query and
+re-renders **every component subscribed to that store**.
+
+If you store unrelated data together, an update to one field causes components
+that only care about another field to re-render unnecessarily.
+
+**Prefer one store per concern:**
+
+```ts
+// ✗ one big store — changing theme re-renders the language selector and vice versa
+const userPrefsStore = StorageStore.create({ key: 'user_prefs', store: localStorage, ... });
+
+// ✓ one store per concern — each component only re-renders when its data changes
+const themeStore        = StorageStore.create({ key: 'theme',        store: localStorage, ... });
+const languageStore     = StorageStore.create({ key: 'language',     store: localStorage, ... });
+const notificationsStore = StorageStore.create({ key: 'notifications', store: localStorage, ... });
+```
+
+A good rule of thumb: if two pieces of data are always changed together, they belong
+in the same store. If they are ever changed independently, split them.
+
+<Canvas of={Stories.PatchStory} />

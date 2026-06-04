@@ -1,0 +1,36 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as Stories from "./Memory.stories";
+
+<Meta of={Stories} />
+
+# `fromMemory`
+
+`fromMemory` creates an in-memory `ExternalStore` — no browser storage, no network.
+Use it as the `store` option in tests and Storybook where you want controlled,
+predictable state without side effects.
+
+```ts
+import { StorageStore, fromMemory } from '@tacky-org/storage';
+
+const userPrefsStore = StorageStore.create({
+  key:          'user_prefs',
+  store:        fromMemory(),
+  validate:     withZod(UserPrefsSchema),
+  defaultValue: DEFAULT_USER_PREFS,
+});
+```
+
+Subscribers are notified **synchronously** on every `set()` or `mutation.set()` call,
+so `useStorageSuspenseQuery`, `useStorageQuery`, and `useStorageMutation` behave
+exactly as they would against real browser storage.
+
+```ts
+// In a test — swap localStorage for fromMemory to keep tests isolated
+const testStore = StorageStore.create({
+  key:      'user_prefs',
+  store:    fromMemory({ theme: 'dark', language: 'fr', notifications: true }),
+  validate: withZod(UserPrefsSchema),
+});
+```
+
+<Canvas of={Stories.Standard} />

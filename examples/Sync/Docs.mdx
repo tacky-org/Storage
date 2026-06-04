@@ -1,0 +1,50 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as Stories from "./Sync.stories";
+
+<Meta of={Stories} />
+
+# Sync — cached until changed
+
+Storage queries are cached indefinitely (`staleTime: Infinity`).
+A re-read is triggered only when the store signals a change.
+
+<table>
+  <thead><tr><th>Trigger</th><th>How</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>In-process write</strong></td>
+      <td><code>useStorageMutation</code> writes to the store and invalidates the query automatically</td>
+    </tr>
+    <tr>
+      <td><strong>Cross-tab write</strong></td>
+      <td><code>useStorageSuspenseQuery</code> / <code>useStorageQuery</code> subscribe to the native <code>storage</code> event and invalidate automatically</td>
+    </tr>
+  </tbody>
+</table>
+
+## Cross-tab sync
+
+When backed by `localStorage`, `useStorageSuspenseQuery` and `useStorageQuery`
+subscribe to the browser's native `storage` event. Any write from another tab
+invalidates the query and triggers a single re-read — no polling, no websockets.
+
+Only components that call `useStorageSuspenseQuery` or `useStorageQuery` on that
+store will re-render. Nothing else in the tree is affected.
+
+`sessionStorage` is tab-scoped so no cross-tab events fire.
+
+Open this example in two tabs and click a button in one — the other updates immediately.
+
+<Canvas of={Stories.CrossTabStory} />
+
+## `useStorageSync`
+
+`useStorageSuspenseQuery` and `useStorageQuery` call `useStorageSync` internally,
+so you rarely need to call it directly.
+
+It is exported for advanced cases where you need the subscription active before
+the reading component has mounted — for example, pre-warming the cache during
+app initialisation before a lazy-loaded route renders.
+
+Note that `useStorageSync` itself does not cause re-renders. It only invalidates
+the query, which causes components subscribed to that store to re-render.

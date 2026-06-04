@@ -1,0 +1,1 @@
+const t={theme:"light",language:"en",notifications:!1};function i(e){const n=e;if(!["light","dark"].includes(n==null?void 0:n.theme))throw new Error("Invalid theme");if(typeof(n==null?void 0:n.language)!="string")throw new Error("Invalid language");if(typeof(n==null?void 0:n.notifications)!="boolean")throw new Error("Invalid notifications");return n}export{t as D,i as v};

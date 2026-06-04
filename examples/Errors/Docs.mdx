@@ -1,0 +1,70 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as Stories from "./Errors.stories";
+
+<Meta of={Stories} />
+
+# Errors and `StoragePipelineError`
+
+Every step of the read and write pipeline throws a `StoragePipelineError` on failure.
+Catch it in an `<ErrorBoundary>` and inspect `error.step` to know exactly where it failed.
+
+<table>
+  <thead><tr><th>Step</th><th>Pipeline</th><th>When</th></tr></thead>
+  <tbody>
+    <tr><td><code>read</code></td><td>read</td><td>External store threw — e.g. invalid JSON in localStorage</td></tr>
+    <tr><td><code>validate</code></td><td>read</td><td><code>validate</code> function threw — data shape is wrong</td></tr>
+    <tr><td><code>map</code></td><td>read</td><td><code>map</code> function threw</td></tr>
+    <tr><td><code>unmap</code></td><td>write</td><td><code>unmap</code> function threw during a write</td></tr>
+    <tr><td><code>write</code></td><td>write</td><td>External store threw during write — e.g. QuotaExceededError</td></tr>
+  </tbody>
+</table>
+
+```tsx
+import { StoragePipelineError } from '@tacky-org/storage';
+
+const fallback = (error: Error) => {
+  if (error instanceof StoragePipelineError) {
+    return (
+      <div>
+        <p>Failed at step: <strong>{error.step}</strong></p>
+        <p>{error.message}</p>
+      </div>
+    );
+  }
+  return <p>{error.message}</p>;
+};
+
+<ErrorBoundary fallback={fallback}>
+  <Suspense fallback={<p>Loading…</p>}>
+    <MyComponent />
+  </Suspense>
+</ErrorBoundary>
+```
+
+## Empty store is not an error
+
+When a key is absent, `get()` returns `undefined` (or your `defaultValue`).
+Only corrupt or invalid data throws. This mirrors React context behaviour.
+
+```ts
+// Empty store → undefined, no error
+const store = StorageStore.create({ key: 'prefs', store: localStorage, validate });
+store.get(); // → undefined
+
+// Corrupt store → StoragePipelineError('validate', ...)
+localStorage.setItem('storage__prefs', '{"theme":"INVALID"}');
+store.get(); // throws
+```
+
+## `validate` step error
+
+The store below holds corrupt data. `validate` throws and the `<ErrorBoundary>` catches it.
+
+<Canvas of={Stories.Validate} />
+
+## `read` step error
+
+The store below holds a string that cannot be JSON-parsed. The `read` step throws
+before `validate` is even called.
+
+<Canvas of={Stories.Read} />

@@ -1,0 +1,73 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as Stories from "./Reading.stories";
+
+<Meta of={Stories} />
+
+# Reading
+
+Two hooks for reading from a `StorageStore`, matching TanStack Query's own naming:
+
+<table>
+  <thead><tr><th>Hook</th><th>Use when</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>useStorageSuspenseQuery</code></td>
+      <td>You want Suspense — wrap with <code>&lt;Suspense&gt;</code> and <code>&lt;ErrorBoundary&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>useStorageQuery</code></td>
+      <td>You want inline loading / error states, no boundaries needed</td>
+    </tr>
+  </tbody>
+</table>
+
+Both hooks wire up cross-tab sync automatically via the native `storage` event.
+
+## `defaultValue` controls the return type
+
+The TypeScript return type of `data` depends on whether your store has a `defaultValue`:
+
+```ts
+// No defaultValue — data is UserPrefs | null
+const store = StorageStore.create({ key: 'prefs', store: localStorage, validate });
+const { data } = useStorageSuspenseQuery(store);
+// data: UserPrefs | null — must check for null
+
+// With defaultValue — data is always UserPrefs
+const store = StorageStore.create({ key: 'prefs', store: localStorage, validate, defaultValue });
+const { data } = useStorageSuspenseQuery(store);
+// data: UserPrefs — no null check needed
+```
+
+An empty store is **not an error** — it returns `null` (or your `defaultValue`).
+`null` means "key absent" and is a valid TanStack Query result, so the query
+settles immediately. `undefined` is TanStack's "still loading" sentinel — the
+store never returns it, so the query never stays stuck in loading state.
+
+## `useStorageSuspenseQuery` — with `defaultValue`
+
+`data` is always `UserPrefs`. No `null` check at the call site.
+
+<Canvas of={Stories.Suspense_WithDefault} />
+
+## `useStorageSuspenseQuery` — without `defaultValue`
+
+`data` is `UserPrefs | null`. TypeScript enforces the check.
+
+<Canvas of={Stories.Suspense_WithoutDefault} />
+
+## `useStorageQuery` — inline states
+
+No `<Suspense>` or `<ErrorBoundary>` needed.
+Handle `isLoading`, `isError`, and `data` inline.
+
+```tsx
+const { data: prefs, isLoading, isError, error } = useStorageQuery(userPrefsStore);
+
+if (isLoading) return <Spinner />;
+if (isError)   return <p>Error: {String(error)}</p>;
+if (!prefs)    return <p>Nothing saved yet.</p>;
+return <PrefsDisplay prefs={prefs} />;
+```
+
+<Canvas of={Stories.Inline} />
