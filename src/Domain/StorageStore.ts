@@ -15,7 +15,7 @@ type AnyOptions<TData, TRuntime> =
   | StorageStoreOptionsWithMapAndDefault<TData, TRuntime>;
 
 function isWebStorage(store: Storage | ExternalStore): store is Storage {
-  return "removeItem" in store;
+  return "clear" in store;
 }
 
 function toExternalStore(
@@ -37,6 +37,9 @@ function toExternalStore(
     },
     setItem(value) {
       store.setItem(prefixedKey, JSON.stringify(value));
+    },
+    removeItem() {
+      store.removeItem(prefixedKey);
     },
     subscribe(listener) {
       const handler = (event: StorageEvent) => {
@@ -142,6 +145,15 @@ export class StorageStore<TData, TRuntime = TData, TResult = TRuntime | null> {
   patch(partial: Partial<TRuntime>): void {
     const current = this.get() as TRuntime | null;
     this.set({ ...current, ...partial } as TRuntime);
+  }
+
+  /** Removes the stored value. get() returns null (or defaultValue) after this. */
+  reset(): void {
+    try {
+      this.externalStore.removeItem();
+    } catch (cause) {
+      throw new StoragePipelineError("write", cause);
+    }
   }
 
   subscribe(listener: () => void): () => void {

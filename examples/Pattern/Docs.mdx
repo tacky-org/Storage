@@ -63,4 +63,35 @@ export function ThemeToggle() {
 Any number of components can import the same store. When one writes, all re-render.
 No provider, no context — just import and use.
 
+## TanStack Router — `beforeLoad`
+
+Use `prefetchStorage` in `beforeLoad` or `loader` to ensure storage data is in the
+cache before the route renders. Components calling `useStorageSuspenseQuery` will
+never suspend — the data is already there.
+
+```ts
+import { createFileRoute } from '@tanstack/react-router';
+import { prefetchStorage } from '@tacky-org/storage';
+import { userPrefsStore } from '../stores/userPrefsStore';
+
+export const Route = createFileRoute('/app')({
+  beforeLoad: ({ context: { queryClient } }) =>
+    prefetchStorage(userPrefsStore, queryClient),
+});
+```
+
+Mix Config and Storage prefetching in parallel:
+
+```ts
+import { prefetchConfig } from '@tacky-org/config';
+import { prefetchStorage } from '@tacky-org/storage';
+
+beforeLoad: ({ context: { queryClient } }) =>
+  Promise.all([
+    prefetchConfig(appConfigLoader,  queryClient),
+    prefetchStorage(userPrefsStore,  queryClient),
+    prefetchStorage(themeStore,      queryClient),
+  ]),
+```
+
 <Canvas of={Stories.Standard} />

@@ -17,6 +17,7 @@ const preview: Preview = {
           "Transforms",
           "Sync", ["Cross-tab sync — localStorage"],
           "Errors",
+          "TanStack", ["Prefetch"],
           "Pattern", ["App Structure"],
         ],
       },

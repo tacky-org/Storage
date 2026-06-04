@@ -10,6 +10,8 @@
 export interface ExternalStore<T = unknown> {
   getItem(): T | null;
   setItem(value: T): void;
+  /** Removes the stored value — get() will return null after this. */
+  removeItem(): void;
   /** Returns an unsubscribe function. */
   subscribe(listener: () => void): () => void;
 }

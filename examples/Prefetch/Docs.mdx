@@ -1,0 +1,89 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as Stories from "./Prefetch.stories";
+
+<Meta of={Stories} />
+
+# `prefetchStorage`
+
+Populates the TanStack Query cache before a component tree renders.
+When `useStorageSuspenseQuery` then runs, the data is already there —
+no Suspense fallback, no loading state.
+
+Uses `ensureQueryData` internally — if the data is already cached it returns
+immediately, so navigating back to a route costs nothing.
+
+---
+
+## `beforeLoad` vs `loader`
+
+Both receive `{ context: { queryClient } }` and work identically with `prefetchStorage`.
+
+<table>
+  <thead><tr><th></th><th><code>beforeLoad</code></th><th><code>loader</code></th></tr></thead>
+  <tbody>
+    <tr><td>Runs</td><td>Before route activates — top-down, in series</td><td>When route is about to render — in parallel with sibling loaders</td></tr>
+    <tr><td>Use for</td><td>Auth guards, redirects, context that child routes depend on</td><td>Data fetching — preferred for performance</td></tr>
+    <tr><td>Return value</td><td>Not used for data</td><td>Available via <code>Route.useLoaderData()</code></td></tr>
+  </tbody>
+</table>
+
+For storage prefetching, **`loader` is the right choice** — it runs in parallel with other loaders and doesn't block sibling routes.
+
+```ts
+export const Route = createFileRoute('/app')({
+  loader: ({ context: { queryClient } }) =>
+    prefetchStorage(userPrefsStore, queryClient),
+});
+```
+
+Mix Config and Storage in parallel:
+
+```ts
+import { prefetchConfig } from '@tacky-org/config';
+import { prefetchStorage } from '@tacky-org/storage';
+
+loader: ({ context: { queryClient } }) =>
+  Promise.all([
+    prefetchConfig(appConfigLoader, queryClient),
+    prefetchStorage(userPrefsStore,  queryClient),
+    prefetchStorage(themeStore,      queryClient),
+  ]),
+```
+
+## Without prefetch
+
+The Suspense fallback shows until the store finishes reading (~800ms here).
+
+<Canvas of={Stories.Without} />
+
+## With `loader`
+
+`prefetchStorage` runs in the loader before the component tree mounts.
+By the time `useStorageSuspenseQuery` runs the data is already in the cache —
+the Suspense fallback never appears.
+
+<Canvas of={Stories.Loader} />
+
+## `loader` return value — `useLoaderData`
+
+`loader` can also *return* the prefetched data, making it available via
+`Route.useLoaderData()` alongside `useStorageSuspenseQuery`.
+Both read from the same cached value — no duplicate read.
+
+```ts
+export const Route = createFileRoute('/app')({
+  loader: async ({ context: { queryClient } }) => {
+    const prefs = await prefetchStorage(userPrefsStore, queryClient);
+    return { prefs };
+  },
+});
+
+// In the component — two ways to read the same data:
+const { prefs } = Route.useLoaderData();                        // direct, type-safe
+const { data: prefs } = useStorageSuspenseQuery(userPrefsStore); // works anywhere in the tree
+```
+
+Prefer `useStorageSuspenseQuery` for deeply nested components and `useLoaderData`
+when you want the data available at the route level without importing the store.
+
+<Canvas of={Stories.LoaderData} />

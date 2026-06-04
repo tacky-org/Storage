@@ -29,6 +29,10 @@ export function fromMemory(initial: unknown = null): ExternalStore {
       current = value;
       listeners.forEach((l) => l());
     },
+    removeItem() {
+      current = null;
+      listeners.forEach((l) => l());
+    },
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);

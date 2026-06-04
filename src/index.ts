@@ -5,6 +5,7 @@ export type { StoragePipelineStep } from "./Errors/StoragePipelineError";
 
 // ─── tanstack query integration ───────────────────────────────────────────────
 export { createStorageQuery } from "./Query/createStorageQuery";
+export { prefetchStorage } from "./Query/prefetchStorage";
 export { createStorageMutation } from "./Query/createStorageMutation";
 export { useStorageQuery } from "./Query/useStorageQuery";
 export { useStorageSuspenseQuery } from "./Query/useStorageSuspenseQuery";
