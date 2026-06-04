@@ -39,9 +39,9 @@ export function useStorageMutation<TData, TRuntime, TResult>(
   });
 
   return {
-    set:   (value: TRuntime)            => mutate({ type: "set",   value }),
+    set: (value: TRuntime) => mutate({ type: "set", value }),
     patch: (partial: Partial<TRuntime>) => mutate({ type: "patch", partial }),
-    reset: ()                           => mutate({ type: "reset" }),
+    reset: () => mutate({ type: "reset" }),
     isPending,
     isError,
     isSuccess,

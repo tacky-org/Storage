@@ -1,0 +1,1 @@
+function u(n=null){let t=n;const r=new Set;return{getItem(){return t},setItem(e){t=e,r.forEach(o=>o())},removeItem(){t=null,r.forEach(e=>e())},subscribe(e){return r.add(e),()=>r.delete(e)}}}export{u as f};

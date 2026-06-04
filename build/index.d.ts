@@ -1,6 +1,6 @@
 import * as _tanstack_query_core from '@tanstack/query-core';
 import * as _tanstack_react_query from '@tanstack/react-query';
-import { MutationOptions } from '@tanstack/react-query';
+import { QueryClient, MutationOptions } from '@tanstack/react-query';
 
 /**
  * The contract a custom store adapter must satisfy.
@@ -12,6 +12,8 @@ import { MutationOptions } from '@tanstack/react-query';
 interface ExternalStore<T = unknown> {
     getItem(): T | null;
     setItem(value: T): void;
+    /** Removes the stored value — get() will return null after this. */
+    removeItem(): void;
     /** Returns an unsubscribe function. */
     subscribe(listener: () => void): () => void;
 }
@@ -98,6 +100,8 @@ declare class StorageStore<TData, TRuntime = TData, TResult = TRuntime | null> {
     get(): TResult;
     set(value: TRuntime): void;
     patch(partial: Partial<TRuntime>): void;
+    /** Removes the stored value. get() returns null (or defaultValue) after this. */
+    reset(): void;
     subscribe(listener: () => void): () => void;
     /**
      * The TanStack Query key for this store.
@@ -152,6 +156,22 @@ declare function createStorageQuery<TData, TRuntime, TResult>(store: StorageStor
 };
 
 /**
+ * Ensures storage data is in the TanStack Query cache before a route renders.
+ * Returns cached data immediately if already loaded, otherwise reads and caches it.
+ *
+ * Use in TanStack Router's beforeLoad or loader to guarantee data is available
+ * the moment a component calls useStorageSuspenseQuery.
+ *
+ * @example
+ * // route.ts
+ * export const Route = createFileRoute('/app')({
+ *   beforeLoad: ({ context: { queryClient } }) =>
+ *     prefetchStorage(userPrefsStore, queryClient),
+ * });
+ */
+declare function prefetchStorage<TData, TRuntime, TResult>(store: StorageStore<TData, TRuntime, TResult>, queryClient: QueryClient): Promise<TResult>;
+
+/**
  * Wraps a StorageStore's set method into a TanStack mutation options object.
  * Pass the result to useMutation.
  *
@@ -203,15 +223,16 @@ declare function useStorageSuspenseQuery<TData, TRuntime, TResult>(store: Storag
  *
  * mutation.set({ theme: 'dark', language: 'en', notifications: true });
  * mutation.patch({ theme: 'dark' });
+ * mutation.reset(); // removes the key — get() returns null (or defaultValue)
  */
 declare function useStorageMutation<TData, TRuntime, TResult>(store: StorageStore<TData, TRuntime, TResult>): {
     set: (value: TRuntime) => void;
     patch: (partial: Partial<TRuntime>) => void;
+    reset: () => void;
     isPending: boolean;
     isError: boolean;
     isSuccess: boolean;
     error: Error | null;
-    reset: () => void;
 };
 
 /**
@@ -311,4 +332,4 @@ type ValibotParser<T> = (data: unknown) => T;
  */
 declare function withValibot<T>(parser: ValibotParser<T>): (raw: unknown) => T;
 
-export { type ExternalStore, type ResolveStorage, STORAGE_KEY_PREFIX, StoragePipelineError, type StoragePipelineStep, type StorageRegistry, StorageStore, type StorageStoreOptions, type StorageStoreOptionsWithDefault, type StorageStoreOptionsWithMap, type StorageStoreOptionsWithMapAndDefault, createStorageMutation, createStorageQuery, fromMemory, useStorageMutation, useStorageQuery, useStorageSuspenseQuery, useStorageSync, withJoi, withValibot, withYup, withZod };
+export { type ExternalStore, type ResolveStorage, STORAGE_KEY_PREFIX, StoragePipelineError, type StoragePipelineStep, type StorageRegistry, StorageStore, type StorageStoreOptions, type StorageStoreOptionsWithDefault, type StorageStoreOptionsWithMap, type StorageStoreOptionsWithMapAndDefault, createStorageMutation, createStorageQuery, fromMemory, prefetchStorage, useStorageMutation, useStorageQuery, useStorageSuspenseQuery, useStorageSync, withJoi, withValibot, withYup, withZod };

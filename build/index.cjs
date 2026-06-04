@@ -25,7 +25,7 @@ var StoragePipelineError = _StoragePipelineError;
 
 // src/Domain/StorageStore.ts
 function isWebStorage(store) {
-  return "removeItem" in store;
+  return "clear" in store;
 }
 __name(isWebStorage, "isWebStorage");
 function toExternalStore(key, store) {
@@ -43,6 +43,9 @@ function toExternalStore(key, store) {
     },
     setItem(value) {
       store.setItem(prefixedKey, JSON.stringify(value));
+    },
+    removeItem() {
+      store.removeItem(prefixedKey);
     },
     subscribe(listener) {
       const handler = /* @__PURE__ */ __name((event) => {
@@ -110,6 +113,14 @@ var _StorageStore = class _StorageStore {
     const current = this.get();
     this.set({ ...current, ...partial });
   }
+  /** Removes the stored value. get() returns null (or defaultValue) after this. */
+  reset() {
+    try {
+      this.externalStore.removeItem();
+    } catch (cause) {
+      throw new StoragePipelineError("write", cause);
+    }
+  }
   subscribe(listener) {
     return this.externalStore.subscribe(listener);
   }
@@ -131,6 +142,12 @@ function createStorageQuery(store) {
   });
 }
 __name(createStorageQuery, "createStorageQuery");
+
+// src/Query/prefetchStorage.ts
+function prefetchStorage(store, queryClient) {
+  return queryClient.ensureQueryData(createStorageQuery(store));
+}
+__name(prefetchStorage, "prefetchStorage");
 
 // src/Query/createStorageMutation.ts
 function createStorageMutation(store) {
@@ -176,8 +193,10 @@ function useStorageMutation(store) {
     mutationFn: /* @__PURE__ */ __name(async (action) => {
       if (action.type === "set") {
         store.set(action.value);
-      } else {
+      } else if (action.type === "patch") {
         store.patch(action.partial);
+      } else {
+        store.reset();
       }
     }, "mutationFn"),
     onSuccess: /* @__PURE__ */ __name(() => {
@@ -187,11 +206,11 @@ function useStorageMutation(store) {
   return {
     set: /* @__PURE__ */ __name((value) => mutate({ type: "set", value }), "set"),
     patch: /* @__PURE__ */ __name((partial) => mutate({ type: "patch", partial }), "patch"),
+    reset: /* @__PURE__ */ __name(() => mutate({ type: "reset" }), "reset"),
     isPending,
     isError,
     isSuccess,
-    error,
-    reset
+    error
   };
 }
 __name(useStorageMutation, "useStorageMutation");
@@ -206,6 +225,10 @@ function fromMemory(initial = null) {
     },
     setItem(value) {
       current = value;
+      listeners.forEach((l) => l());
+    },
+    removeItem() {
+      current = null;
       listeners.forEach((l) => l());
     },
     subscribe(listener) {
@@ -244,6 +267,7 @@ exports.StorageStore = StorageStore;
 exports.createStorageMutation = createStorageMutation;
 exports.createStorageQuery = createStorageQuery;
 exports.fromMemory = fromMemory;
+exports.prefetchStorage = prefetchStorage;
 exports.useStorageMutation = useStorageMutation;
 exports.useStorageQuery = useStorageQuery;
 exports.useStorageSuspenseQuery = useStorageSuspenseQuery;
