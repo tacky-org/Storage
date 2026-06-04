@@ -1,6 +1,9 @@
 {
   "name": "@tacky-org/storage",
-  "version": "0.0.4",
+  "version": "0.0.5",
+  "repository": {
+    "url": "https://github.com/tacky-org/Storage"
+  },
   "description": "Storage management",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
